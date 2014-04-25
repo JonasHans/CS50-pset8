@@ -8,12 +8,15 @@
  */
  
 // timer
-var time = 10;
+var time = 60;
 
 // points
 var points = 0;
 
-// counter which runs every second
+// minus point
+var minPoints = 0;
+
+// interval which runs every second
 var counter = setInterval(timer, 1000); 
 
 // default height
@@ -113,10 +116,13 @@ function dropoff()
     var shuttleLL;
     var dropoff = false;
 	
+	// look through all the seats
 	for(var i  = 0; i < shuttle.seats.length; i++)
 	{
+		// if a seat is not empty
 		if(shuttle.seats[i] != null)
 		{
+			// check shuttle distance versus passengers house
 			shuttleLL = shuttle.distance(HOUSES[shuttle.seats[i].house].lat, HOUSES[shuttle.seats[i].house].lng);
 			if(shuttleLL < 30)
 			{
@@ -125,7 +131,8 @@ function dropoff()
 				dropoff = true;
 				points++;
 
-				if(points == 102)
+				// if all passengers hav been dropped of display the final score
+				if(points+minPoints == 102)
 				{
 					$("#announcements").html("Every passenger has been dropped of !, final score is "+points);
 				}
@@ -136,6 +143,8 @@ function dropoff()
 			}
 		}
 	}
+	
+	// if there are no passengers dropped of here, displat this
 	if(!dropoff)
 	{
 		$("#announcements").html("No passenger drop offs here..");
@@ -223,6 +232,9 @@ function keystroke(event, state)
     {
         event = window.event;
     }
+    
+    // when shutlle is moved, display standard message
+    $("#announcements").html("No announcements at this time.");
 
 	// page up
 	if (event.keyCode == 33)
@@ -333,12 +345,16 @@ function pickup()
     var features = earth.getFeatures();
     var pickup = false;
     
+    // if there is a seat available proceed
 	if(getSeat() != "full")
 	{
+		// check all passengers
 		for(var i  = 0; i < PASSENGERS.length; i++)
 		{
+			// house of the passenger must be present in HOUSES and have a placemark
 			if(HOUSES[PASSENGERS[i].house] != null && PASSENGERS[i].placemark != null )
 			{
+				// calculate distance between shuttle and passenger
 				shuttleLL = shuttle.distance(PASSENGERS[i].placemark.getGeometry().getLatitude(), PASSENGERS[i].placemark.getGeometry().getLongitude());
 				if(shuttleLL < 15.0)
 				{
@@ -348,6 +364,8 @@ function pickup()
 					PASSENGERS[i].marker.setMap(null);
 					chart();
 					pickup = true;
+					
+					// if time was up, relaunch the timer, else add 30 seconds
 					if(time == 0)
 					{
 						time += 60;
@@ -357,13 +375,15 @@ function pickup()
 					}
 					else
 					{
-						time += 60;
+						time += 30;
 					}
+					
 				}
 			}
 		}
 	}
 	
+	// if there are no seats available or no one was picked up, display this
 	if(getSeat() == "full" || !pickup)
 	{
 		if(getSeat() == "full")
@@ -402,6 +422,7 @@ function timer()
 	{
 		clearInterval(counter);
 		points--;
+		minPoints++;
 		$("#announcements").html("Time ended, you were not fast enough. You lost 1 point, score is now "+points);
 		return;
 	}
