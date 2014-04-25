@@ -6,6 +6,15 @@
  *
  * Implements a shuttle service.
  */
+ 
+// timer
+var time = 10;
+
+// points
+var points = 0;
+
+// counter which runs every second
+var counter = setInterval(timer, 1000); 
 
 // default height
 var HEIGHT = 0.8;
@@ -89,7 +98,7 @@ function chart()
         }
         else
         {
-            html += "<li>" + "TODO" + "</li>";
+            html += "<li>" + shuttle.seats[i].name + ", "+ shuttle.seats[i].house +"</li>";
         }
     }
     html += "</ol>";
@@ -101,8 +110,38 @@ function chart()
  */
 function dropoff()
 {
-    alert("TODO");
+    var shuttleLL;
+    var dropoff = false;
+	
+	for(var i  = 0; i < shuttle.seats.length; i++)
+	{
+		if(shuttle.seats[i] != null)
+		{
+			shuttleLL = shuttle.distance(HOUSES[shuttle.seats[i].house].lat, HOUSES[shuttle.seats[i].house].lng);
+			if(shuttleLL < 30)
+			{
+				shuttle.seats[i] = null;
+				chart();
+				dropoff = true;
+				points++;
+
+				if(points == 102)
+				{
+					$("#announcements").html("Every passenger has been dropped of !, final score is "+points);
+				}
+				else
+				{
+					$("#announcements").html("Your score is : "+points);
+				}
+			}
+		}
+	}
+	if(!dropoff)
+	{
+		$("#announcements").html("No passenger drop offs here..");
+	}
 }
+
 
 /**
  * Called if Google Earth fails to load.
@@ -183,6 +222,20 @@ function keystroke(event, state)
     if (!event)
     {
         event = window.event;
+    }
+
+	// page up
+	if (event.keyCode == 33)
+    {
+        shuttle.velocity += 1;
+        return false;
+    }
+    
+    // page down
+    if (event.keyCode == 34)
+    {
+        shuttle.velocity -= 1;
+        return false;
     }
 
     // left arrow
@@ -276,7 +329,83 @@ function load()
  */
 function pickup()
 {
-    alert("TODO");
+    var shuttleLL;
+    var features = earth.getFeatures();
+    var pickup = false;
+    
+	if(getSeat() != "full")
+	{
+		for(var i  = 0; i < PASSENGERS.length; i++)
+		{
+			if(HOUSES[PASSENGERS[i].house] != null && PASSENGERS[i].placemark != null )
+			{
+				shuttleLL = shuttle.distance(PASSENGERS[i].placemark.getGeometry().getLatitude(), PASSENGERS[i].placemark.getGeometry().getLongitude());
+				if(shuttleLL < 15.0)
+				{
+					shuttle.seats[getSeat()] = PASSENGERS[i];
+					features.removeChild(PASSENGERS[i].placemark);
+					PASSENGERS[i].placemark = null;
+					PASSENGERS[i].marker.setMap(null);
+					chart();
+					pickup = true;
+					if(time == 0)
+					{
+						time += 60;
+						counter = setInterval(timer, 1000);
+						timer();
+						$("#announcements").html("No announcements at this time.");
+					}
+					else
+					{
+						time += 60;
+					}
+				}
+			}
+		}
+	}
+	
+	if(getSeat() == "full" || !pickup)
+	{
+		if(getSeat() == "full")
+		{
+			$("#announcements").html("No seats available at this time.");
+		}
+		else
+		{		
+			$("#announcements").html("No passengers present in a 15 meter radius.");
+		}
+	}
+}
+
+/**
+ * Returns the index of a seat that is available, if there is none returns full
+ */
+function getSeat()
+{
+	for(var i = 0; i < shuttle.seats.length; i++)
+	{
+		if(shuttle.seats[i] == null)
+		{
+			return i;
+		}
+	}
+	return "full";
+}
+
+/**
+ * Timer which counts down
+ */
+function timer()
+{
+	time = time-1;
+	if (time <= 0)
+	{
+		clearInterval(counter);
+		points--;
+		$("#announcements").html("Time ended, you were not fast enough. You lost 1 point, score is now "+points);
+		return;
+	}
+	document.getElementById("timer").innerHTML = time + " secs";
 }
 
 /**
@@ -321,7 +450,7 @@ function populate()
         // prepare stylemap
         var styleMap = earth.createStyleMap("");
         styleMap.setNormalStyle(style);
-        styleMap.setHighlightStyle(style);
+        styleMap.setHighlightStyle(style); 
 
         // associate stylemap with placemark
         placemark.setStyleSelector(styleMap);
@@ -347,7 +476,9 @@ function populate()
             title: PASSENGERS[i].name + " at " + building.name
         });
 
-        // TODO: remember passenger's placemark and marker for pick-up's sake
+        // put placemark and marker into the passenger array
+        PASSENGERS[i].placemark = placemark;
+        PASSENGERS[i].marker = marker;
     }
 }
 
